@@ -1,3 +1,18 @@
+AI Searching
+
+The primary problem I use is Vacuum World which is
+briefly described below.
+
+Vacuum World
+
+The world is a grid of some width and height (specified)
+
+Each location on the grid can have dirt. The goal of the
+problem is to remove all the dirt formt he grid.
+
+An agent cleaning the grid can move left right up and down and
+it can suck up the dirt.
+
 Usage: ./vacuum_world.py [-ibdga] [-m n] [-n] [-s n] width height
 
    -i --iter     Use iterative search
