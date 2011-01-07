@@ -1,0 +1,58 @@
+zrbecker:src$ time ./vacuum_world.py --breadth --seed 2000 3 2
+Initial State:
+    *  *
+ * (*)
+
+Doing breadth first search
+
+Solution Cost: 8
+Left Suck Right Suck Up Suck Right Suck
+
+real	0m0.124s
+user	0m0.098s
+sys	0m0.021s
+
+
+zrbecker:src$ time ./vacuum_world.py --breadth --graph-off --seed 2000 3 2
+Initial State:
+    *  *
+ * (*)
+
+Doing breadth first search
+
+Solution Cost: 8
+Left Suck Right Suck Up Suck Right Suck
+
+real	0m18.806s
+user	0m18.127s
+sys	0m0.675s
+
+
+zrbecker:src$ time ./vacuum_world.py --depth --max 9 --seed 2000 3 2
+Initial State:
+    *  *
+ * (*)
+
+Doing depth first search
+
+Solution Cost: 9
+Suck Suck Left Suck Up Right Suck Right Suck
+
+real	0m1.496s
+user	0m1.471s
+sys	0m0.022s
+
+
+zrbecker:src$ time ./vacuum_world.py --iter --seed 2000 3 2
+Initial State:
+    *  *
+ * (*)
+
+Doing iteretive search
+
+Solution Cost: 8
+Suck Left Suck Up Right Suck Right Suck
+
+real	0m3.595s
+user	0m3.569s
+sys	0m0.022s
