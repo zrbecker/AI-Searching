@@ -1,0 +1,12 @@
+Usage: ./vacuum_world.py [-ibdga] [-m n] [-n] [-s n] width height
+
+   -i --iter     Use iterative search
+   -b --breadth  Use breadth first search
+   -d --depth    Use depth first search
+   -g --greedy   Use greedy search
+   -a --astar    Use A* search
+
+   -m --max n    Set maximum depth for depth first search
+   -n --nograph  Use a tree instead of graph for state space
+   -s --seed n   Seed the random number generator
+   -h --help     Print this message
