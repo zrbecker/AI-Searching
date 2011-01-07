@@ -1,86 +1,96 @@
-
 from collections import deque
 from heapq import heappop, heappush
-from Queue import *
 
-def breadthFirstSearch(problem, graph=True):
-    closed = set()
-    fringe = deque()
-    fringe.append( Node(None, None, problem.init_state, 0) )
-    while len(fringe):
-        node = fringe.popleft()
-        if problem.goalTest(node.state):
-            return node.solution()
-        if node.state not in closed or not graph:
-            if graph:
-                closed.add(node.state)
-            for (action, state) in problem.successorFunction(node.state):
-                step_cost = problem.stepCost(node.state, action, state)
-                fringe.append( Node(node, action, state, step_cost) )
 
-def depthFirstSearch(problem, max_depth = None, graph=True):
-    closed = set()
-    fringe = deque()
-    fringe.append( Node(None, None, problem.init_state, 0) )
-    while len(fringe):
-        node = fringe.pop()
-        if problem.goalTest(node.state):
-            return node.solution()
-        if node.state not in closed or not graph:
-            if graph:
-                closed.add(node.state)
-            if max_depth is None or node.depth <= max_depth:
-                for (action, state) in problem.successorFunction(node.state):
-                    step_cost = problem.stepCost(node.state, action, state)
+__all__ = ['Agent', 'Node', 'Solution', 'find_eb_factor']
+
+
+class Agent(object):
+    def breadth_search(self, problem, graph=True):
+        closed = set()
+        fringe = deque()
+        fringe.append( Node(None, None, problem.init_state, 0) )
+        while len(fringe):
+            node = fringe.popleft()
+            if problem.isgoal(node.state):
+                return node.solution()
+            if node.state not in closed or not graph:
+                if graph:
+                    closed.add(node.state)
+                for (action, state) in problem.successors(node.state):
+                    step_cost = problem.stepcost(node.state, action, state)
                     fringe.append( Node(node, action, state, step_cost) )
 
-def iteretiveDepthFirstSearch(problem, graph=True):
-    n = 0
-    while 1:
-        solution = depthFirstSearch(problem, n, graph)
-        if solution is None:
-            n += 1
-        else:
-            return solution
+    def depth_search(self, problem, max_depth=None, graph=True):
+        closed = set()
+        fringe = deque()
+        fringe.append( Node(None, None, problem.init_state, 0) )
+        while len(fringe):
+            node = fringe.pop()
+            if problem.isgoal(node.state):
+                return node.solution()
+            if node.state not in closed or not graph:
+                if graph:
+                    closed.add(node.state)
+                if max_depth is None or node.depth <= max_depth:
+                    for (action, state) in problem.successors(node.state):
+                        step_cost = problem.stepcost(node.state, action, state)
+                        fringe.append( Node(node, action, state, step_cost) )
 
-def greedyBestFirstSearch(problem, graph = True):
-    closed = set()
-    fringe = []
-    root = Node(None, None, problem.init_state, 0)
-    heappush(fringe, (problem.greedyEval(root), root))
-    while len(fringe):
-        (value, node) = heappop(fringe)
-        if problem.goalTest(node.state):
-            return node.solution()
-        if node.state not in closed or not graph:
-            if graph:
-                closed.add(node.state)
-            for (action, state) in problem.successorFunction(node.state):
-                step_cost = problem.stepCost(node.state, action, state)
-                newNode = Node(node, action, state, step_cost)
-                heappush(fringe, (problem.greedyEval(newNode), newNode))
+    def iterative_search(self, problem, graph=True):
+        n = 0
+        while 1:
+            solution = self.depth_search(problem, n, graph)
+            if solution is None:
+                n += 1
+            else:
+                return solution
 
-def aStarSearch(problem, graph=True):
-    closed = {}
-    fringe = []
-    root = Node(None, None, problem.init_state, 0)
-    heappush(fringe, (problem.aStarEval(root), root))
-    while len(fringe):
-        (value, node) = heappop(fringe)
-        if problem.goalTest(node.state):
-            return node.solution()
-        skip = False
-        if graph and node.state in closed:
-            skip = True
-            if node.cost < closed[node.state]:
-                skip = False
-        if not graph or not skip:
-            if graph:
-                closed[node.state] = node.cost
-            for (action, state) in problem.successorFunction(node.state):
-                step_cost = problem.stepCost(node.state, action, state)
-                newNode = Node(node, action, state, step_cost)
-                heappush(fringe, (problem.aStarEval(newNode), newNode))
+    def greedy_search(self, problem, graph=True):
+        closed = set()
+        fringe = []
+        root = Node(None, None, problem.init_state, 0)
+        heappush(fringe, (self.greedy_eval(root), root))
+        while len(fringe):
+            (value, node) = heappop(fringe)
+            if problem.isgoal(node.state):
+                return node.solution()
+            if node.state not in closed or not graph:
+                if graph:
+                    closed.add(node.state)
+                for (action, state) in problem.successors(node.state):
+                    step_cost = problem.stepcost(node.state, action, state)
+                    newNode = Node(node, action, state, step_cost)
+                    heappush(fringe, (self.greedy_eval(newNode), newNode))
+
+    def astar_search(self, problem, graph=True):
+        closed = {}
+        fringe = []
+        root = Node(None, None, problem.init_state, 0)
+        heappush(fringe, (self.astar_eval(root), root))
+        while len(fringe):
+            (value, node) = heappop(fringe)
+            if problem.isgoal(node.state):
+                return node.solution()
+            skip = False
+            if graph and node.state in closed:
+                skip = True
+                if node.cost < closed[node.state]:
+                    skip = False
+            if not graph or not skip:
+                if graph:
+                    closed[node.state] = node.cost
+                for (action, state) in problem.successors(node.state):
+                    step_cost = problem.stepcost(node.state, action, state)
+                    newNode = Node(node, action, state, step_cost)
+                    heappush(fringe, (self.astar_eval(newNode), newNode))
+
+    def greedy_eval(self, node):
+        return 0
+
+    def astar_eval(self, node):
+        return node.cost
+
 
 class Node:
     nodes_created = 0
@@ -113,21 +123,6 @@ class Node:
         actions.reverse()
         return Solution(current_node, actions, self.cost)
 
-class Problem:
-    """
-    An empty problem
-    """
-    def __init__(self):
-        self.init_state = None
-
-    def successorFunction(self, state):
-        return []
-
-    def goalTest(self, state):
-        return True
-
-    def stepCost(self, prevState, action, newState):
-        return 1
 
 class Solution:
     """
@@ -138,33 +133,41 @@ class Solution:
         self.actions = actions
         self.cost = cost
 
-def effectiveBranchingFactor(bf, d, n):
+
+def find_eb_factor(bf, depth, nodes):
     """
     Calculates the effective branching factor of
-    a heuristic.
+    a search.
 
-    bf - Is the branching factor
-    d - Is the depth of a solution
-    n - Is the total number of nodes generated
+    Node - If effective branching factor is not between
+           1 and the branching factor then this will return
+           a value near 1 or the branching factor.
     """
-    return effectiveBranchingFactorHelper(1, bf, d, n)
+    return eb_factor_helper(1, bf, depth, nodes)
 
-def effectiveBranchingFactorHelper(beg, end, d, n):
-    beg = float(beg)
-    end = float(end)
-    if (end - beg) / 2 < 0.01:
-        return (beg + end) / 2
 
-    nodes = summation(0, d, (beg + end) / 2)
-
+def eb_factor_helper(beg, end, d, n):
+    """
+    Does a binary search to estimate the solution to
+    the equation.
+    1 + x + x^2 + ... + x^d = n
+    Assumes the answer is between beg and end
+    """
+    if float(end - beg) / 2 < 0.01:
+        return float(beg + end) / 2
+    nodes = summation(0, d, float(beg + end) / 2)
     if nodes > n:
-        return effectiveBranchingFactorHelper(beg, (beg + end) / 2, d, n)
+        return eb_factor_helper(beg, float(beg + end) / 2, d, n)
     elif nodes < n:
-        return effectiveBranchingFactorHelper((beg + end) / 2, end, d, n)
+        return eb_factor_helper(float(beg + end) / 2, end, d, n)
     else:
-        return (beg + end) / 2
+        return float(beg + end) / 2
+
 
 def summation(i, n, b):
+    """
+    Evaluates the equation b^i + b^{i + 1} + ... + b^n
+    """
     sum = 0
     while i <= n:
         sum += b ** i

@@ -1,10 +1,17 @@
 #!/usr/bin/python -tt
+
 import sys
+import getopt
 import random
-from random import randint
+import random
+
 from searching import *
 
-class VacuumWorld(Problem):
+
+__all__ = ['VacuumWorld', 'VacuumWorldAgent', 'VacuumWorldState']
+
+
+class VacuumWorld(object):
     """
     Vacuum World
 
@@ -15,195 +22,235 @@ class VacuumWorld(Problem):
 
     An agent cleaning the grid can move left right up and down and
     it can suck up the dirt.
+    
     """
     LEFT  = 'Left'
     RIGHT = 'Right'
     UP    = 'Up'
     DOWN  = 'Down'
     SUCK  = 'Suck'
+
+    def successors(self, state):
+        """
+        Finds all the possible actions and resulting states
+        for a paticular state.
+        
+        """
+        result = []
+        for action in (self.LEFT, self.RIGHT, self.UP, self.DOWN, self.SUCK):
+            newstate = self.doaction(action,state)
+            result.append((action, newstate))
+        return result
+
+    def isgoal(self, state):
+        """ Tests if a state is a goal state (All spaces clean) """
+        return state.grid == 0
     
-    actions = [LEFT, RIGHT, UP, DOWN, SUCK]
+    def randstate(self, width, height):
+        """ Creates a random state """
+        x = random.randint(0, width - 1)
+        y = random.randint(0, height - 1)
+        grid = random.randint(0, 2 ** (width * height) - 1)
+        return VacuumWorldState(x, y, width, height, grid)
     
+    def doaction(self, action, state):
+        """
+        Finds the resulting state from performing an action
+        on another state.
+        
+        """
+        x, y = state.x, state.y
+        w, h = state.w, state.h
+        grid = state.grid
+        if action == self.LEFT and x > 0:
+            x -= 1
+        elif action == self.RIGHT and x < w - 1:
+            x += 1
+        elif action == self.UP and y > 0:
+            y -= 1
+        elif action == self.DOWN and y < h - 1:
+            y += 1
+        elif action == self.SUCK:
+            grid &= (2 ** (w * h) - 1 ^ 2 ** (y * w + x))
+        return VacuumWorldState(x, y, w, h, grid)
+
+    def stepcost(self, prev, action, new):
+        """ Step cost is equal to depth """
+        return 1
+
     def __init__(self, width, height):
         """ Initializes the problem with a random state """
-        self.init_state = self.randomState(width, height)
+        self.init_state = self.randstate(width, height)
 
-    def successorFunction(self, state):
-        """ Finds all the possible actions and resulting states
-            for a paticular state. """
-        return [(action, self.doAction(action, state))
-                   for action in self.actions]
 
-    def goalTest(self, state):
-        """ Tests if a state is a goal state (All spaces clean) """
-        return state[4] == 0
-    
-    def randomState(self, width, height):
-        """ Creates a random state """
-        x = randint(0, width - 1)
-        y = randint(0, height - 1)
-        grid = randint(0, 2 ** (width * height) - 1)
-        return (x, y, width, height, grid)
-    
-    def doAction(self, action, state):
-        """ Finds the resulting state from performing an action
-            on another state. """
-        (x, y, w, h, g) = state
-        if   action == self.LEFT  and x > 0:     x -= 1
-        elif action == self.RIGHT and x < w - 1: x += 1
-        elif action == self.UP    and y > 0:     y -= 1
-        elif action == self.DOWN  and y < h - 1: y += 1
-        elif action == self.SUCK:
-            g &= (2 ** (w * h) - 1) ^ 2 ** (y * w + x)
-        return (x, y, w, h, g)
+class VacuumWorldAgent(Agent):
+    """
+    Specialized agent for dealing with the vacuum world problem.
 
-    def heuristic1(self, node):
-        (x, y, w, h, g) = node.state
+    """
+    def heuristic(self, node):
+        """
+        Evaluates the number of tiles on the board and the
+        number of actions it would take to clean them up
+        if they were all in a row.
+
+        """
+        state = node.state
         value = 0
-        if g & 2 ** (y * h + x): value -= 1
+        if state.grid & 2 ** (state.y * state.h + state.x): value -= 1
+        g = state.grid
         while g > 0:
             if g % 2: value += 2
             g /= 2
         return value
-    
-    def heuristic2(self, node):
-        (x, y, w, h, g) = node.state
-        h1 = 0
-        h2 = 0
-        if g & 2 ** (y * h + x): h1 -= 1
-        for i in range(w):
-            for j in range(h):
-                if g & 2 ** (j * h + i):
-                    h1 += 2
-                    d = abs(x - i) + abs(y - j) + 1
-                    if h2 < d: h2 = d
-        return max(h1, h2)
 
-    
-    def aStarEval(self, node):
+    def astar_eval(self, node):
         """ Estimates the value of a given state. """
         #print node.cost, self.heuristic(node)
-        return node.cost + self.heuristic1(node)
+        return node.cost + self.heuristic(node)
 
-    def greedyEval(self, node):
+    def greedy_eval(self, node):
         """ Estimates the value of a given state. """
-        return self.heuristic1(node)
-
-def printState(state):
-    (px, py, w, h, g) = state
-    result = ''
-    for y in range(h):
-        for x in range(w):
-            if px == x and py == y: result += '('
-            else:                   result += ' '
-            if g % 2: result += '*'
-            else:     result += ' '
-            g /= 2
-            if px == x and py == y: result += ')'
-            else:                   result += ' '
-        result += '\n'
-    print result
+        return self.heuristic(node)
 
 
-def usage():
-    print 'Usage:', sys.argv[0],
-    print '[--iter | --breadth | --depth | --greedy | --astar] [--max number]',
-    print '[--nograph] [--seed] width height'
-    print
-    print 'All flags have short version -x where x is their first letter.'
+class VacuumWorldState(object):
+    """
+    Encapsulates the members of a vacuum world state.
 
-def main():
-    # Get arguments from console if they are there.
+    """
+    def copy(self):
+        return VacuumWorldState(self.x, self.y, self.w, self.h, self.grid)
+
+    def __init__(self, x, y, w, h, grid):
+        super(VacuumWorldState, self).__setattr__('x', x)
+        super(VacuumWorldState, self).__setattr__('y', y)
+        super(VacuumWorldState, self).__setattr__('w', w)
+        super(VacuumWorldState, self).__setattr__('h', h)
+        super(VacuumWorldState, self).__setattr__('grid', grid)
+
+    def __eq__(self, other):
+        return all((self.x == other.x,
+                    self.y == other.y,
+                    self.w == other.w,
+                    self.h == other.h,
+                    self.grid == other.grid))
+
+    def __hash__(self):
+        return hash((self.x, self.y, self.w, self.h, self.grid))
+
+    def __setattr__(self, *args):
+        raise TypeError('Can\'t modify immutable instance')
+
+    def __str__(self):
+        result = ''
+        print self.grid
+        for y in range(self.h):
+            for x in range(self.w):
+                if self.x == x and self.y == y:
+                    result += '('
+                else:
+                    result += ' '
+                if self.grid & (2 ** (y * self.h + x)):
+                    result += '*'
+                else:
+                    result += ' '
+                if self.x == x and self.y == y:
+                    result += ')'
+                else:
+                    result += ' '
+            result += '\n'
+        return result
+
+
+def usage(details=False):
+    if details:
+        print 'Usage:', sys.argv[0], '[-ibdga] [-m n] [-n] [-s n] width height'
+        print
+        print '   -i --iter     Use iterative search'
+        print '   -b --breadth  Use breadth first search'
+        print '   -d --depth    Use depth first search'
+        print '   -g --greedy   Use greedy search'
+        print '   -a --astar    Use A* search'
+        print
+        print '   -m --max n    Set maximum depth for depth first search'
+        print '   -n --nograph  Use a tree instead of graph for state space'
+        print '   -s --seed n   Seed the random number generator'
+        print '   -h --help     Print this message'
+        pass
+    else:
+        print 'Usage:', sys.argv[0], '[-ibdga] [-m n] [-n] [-s n] width height'
+
+
+def handleargs():
+    type = 'astar'
+    max = None
+    graph = True
     try:
-        type = ''
-        max = None
-        graph = True
-        seed = None
-        
-        args = sys.argv[1:]
-        if args[0] in ['--iter', '-i', '--breadth', '-b',
-                       '--depth', '-b', '--greedy', '-g',
-                       '--astar', '-a']:
-            if   args[0] == '-i': type = 'iter'
-            elif args[0] == '-b': type = 'breadth'
-            elif args[0] == '-d': type = 'depth'
-            elif args[0] == '-g': type = 'greedy'
-            elif args[0] == '-a': type = 'astar'
-            else:                 type = args[0][2:]
-            del args[0]
-        if args[0] in ['--max', '-m']:
-            max = int(args[1])
-            del args[0:2]
-        if args[0] in ['--nograph', '-n']:
+        opts, args = getopt.getopt(sys.argv[1:], 'ibdgam:ns:h', ['iter',
+            'breadth', 'depth', 'greedy', 'astar', 'max=', 'nograph',
+            'help', 'seed='])
+    except getopt.GetoptError, err:
+        print str(err)
+        usage()
+        sys.exit(1)
+    for o, a in opts:
+        if o in ('-i', '--iter'):
+            type = 'iter'
+        elif o in ('-b', '--breadth'):
+            type = 'breadth'
+        elif o in ('-d', '--depth'):
+            type = 'depth'
+        elif o in ('-g', '--greedy'):
+            type = 'greedy'
+        elif o in ('-a', '--astar'):
+            type = 'astar'
+        elif o in ('-m', '--max'):
+            max = a
+        elif o in ('-n', '--nograph'):
             graph = False
-            del args[0]
-        if args[0] in ['--seed', '-s']:
-            seed = int(args[1])
-            del args[0:2]
+        elif o in ('-s', '--seed'):
+            random.seed(a)
+        elif o in ('-h', '--help'):
+            usage(True)
+            sys.exit(0)
+    try:
         width = int(args[0])
         height = int(args[1])
     except:
         usage()
-        sys.exit()
+        sys.exit(1)
+    return (type, max, graph, width, height)
+        
 
-    if seed is not None:
-        random.seed(seed)
-
-    # Create problem and find solution
+def main():
+    (type, max, graph, width, height) = handleargs()
     problem = VacuumWorld(width, height)
-
-    current_state = problem.init_state
+    agent = VacuumWorldAgent()
     print 'Initial State:'
-    printState(current_state)
-    
-    if type == 'depth':
-        print 'Doing depth first search'
-        Node.nodes_created = 0
-        solution = depthFirstSearch(problem, max, graph)
-        eb_factor = effectiveBranchingFactor(5, Node.depth_found, Node.nodes_created)
-        print 'Depth found:', Node.depth_found
-        print 'Nodes created:', Node.nodes_created
-        print 'Branching factor:', 5
-        print 'Effective branching factor:', eb_factor
-    elif type == 'breadth':
+    print problem.init_state
+    Node.nodes_created = 0
+    if type == 'breadth':
         print 'Doing breadth first search'
-        Node.nodes_created = 0
-        solution = breadthFirstSearch(problem, graph)
-        eb_factor = effectiveBranchingFactor(5, Node.depth_found, Node.nodes_created)
-        print 'Depth found:', Node.depth_found
-        print 'Nodes created:', Node.nodes_created
-        print 'Branching factor:', 5
-        print 'Effective branching factor:', eb_factor
+        solution = agent.breadth_search(problem, graph)
+    elif type == 'depth':
+        print 'Doing depth first search'
+        solution = agent.depth_search(problem, max, graph)
     elif type == 'iter':
         print 'Doing iteretive search'
-        Node.nodes_created = 0
-        solution = iteretiveDepthFirstSearch(problem, graph)
-        eb_factor = effectiveBranchingFactor(5, Node.depth_found, Node.nodes_created)
-        print 'Depth found:', Node.depth_found
-        print 'Nodes created:', Node.nodes_created
-        print 'Branching factor:', 5
-        print 'Effective branching factor:', eb_factor
+        solution = agent.iterative_search(problem, graph)
     elif type == 'greedy':
-        print 'Doing greedy best first search'
-        Node.nodes_created = 0
-        solution = greedyBestFirstSearch(problem, graph)
-        eb_factor = effectiveBranchingFactor(5, Node.depth_found, Node.nodes_created)
-        print 'Depth found:', Node.depth_found
-        print 'Nodes created:', Node.nodes_created
-        print 'Branching factor:', 5
-        print 'Effective branching factor:', eb_factor
+        print 'Doing greedy search'
+        solution = agent.greedy_search(problem, graph)
     elif type == 'astar':
         print 'Doing A* search'
-        Node.nodes_created = 0
-        solution = aStarSearch(problem, graph)
-        eb_factor = effectiveBranchingFactor(5, Node.depth_found, Node.nodes_created)
-        print 'Depth found:', Node.depth_found
-        print 'Nodes created:', Node.nodes_created
-        print 'Branching factor:', 5
-        print 'Effective branching factor:', eb_factor
+        solution = agent.astar_search(problem, graph)
+    eb_factor = find_eb_factor(5, Node.depth_found, Node.nodes_created)
+    print 'Depth found:', Node.depth_found
+    print 'Nodes created:', Node.nodes_created
+    print 'Branching factor:', 5
+    print 'Effective branching factor:', eb_factor
     print
-    
-    # Print solution
     if solution is None:
         print 'There was no solution found.'
     elif len(solution.actions) == 0:
@@ -212,6 +259,7 @@ def main():
         print 'Solution Cost:', solution.cost
         for action in solution.actions:
             print action,
+
 
 if __name__ == '__main__':
     main()
