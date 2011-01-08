@@ -118,6 +118,10 @@ class Node(object):
             self.cost = step_cost
             self.depth = 0
 
+    def __lt__(self, other):
+        """ Impemented because python 3 wants it. """
+        return self.depth < other.depth
+
     def solution(self):
         """
         Returns the cost of the solution, and a list
