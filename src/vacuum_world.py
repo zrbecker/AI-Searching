@@ -50,7 +50,7 @@ class VacuumWorld(object):
         """ Creates a random state """
         x = random.randint(0, width - 1)
         y = random.randint(0, height - 1)
-        grid = random.randint(0, 2 ** (width * height) - 1)
+        grid = random.randint(0, 1 << (width * height) - 1)
         return VacuumWorldState(x, y, width, height, grid)
     
     def doaction(self, action, state):
@@ -71,7 +71,7 @@ class VacuumWorld(object):
         elif action == self.DOWN and y < h - 1:
             y += 1
         elif action == self.SUCK:
-            grid &= (2 ** (w * h) - 1 ^ 2 ** (y * w + x))
+            grid &= ((1 << (w * h)) - 1 ^ 1 << (y * w + x))
         return VacuumWorldState(x, y, w, h, grid)
 
     def stepcost(self, prev, action, new):
@@ -97,16 +97,17 @@ class VacuumWorldAgent(Agent):
         """
         state = node.state
         value = 0
-        if state.grid & 2 ** (state.y * state.h + state.x): value -= 1
+        if state.grid & 1 << (state.y * state.w + state.x):
+            value -= 1
         g = state.grid
         while g > 0:
-            if g % 2: value += 2
-            g /= 2
+            if g % 2:
+                value += 2
+            g >>= 1
         return value
 
     def astar_eval(self, node):
         """ Estimates the value of a given state. """
-        #print node.cost, self.heuristic(node)
         return node.cost + self.heuristic(node)
 
     def greedy_eval(self, node):
@@ -144,14 +145,13 @@ class VacuumWorldState(object):
 
     def __str__(self):
         result = ''
-        print self.grid
         for y in range(self.h):
             for x in range(self.w):
                 if self.x == x and self.y == y:
                     result += '('
                 else:
                     result += ' '
-                if self.grid & (2 ** (y * self.h + x)):
+                if self.grid & (1 << (y * self.w + x)):
                     result += '*'
                 else:
                     result += ' '
@@ -245,11 +245,11 @@ def main():
     elif type == 'astar':
         print 'Doing A* search'
         solution = agent.astar_search(problem, graph)
-    eb_factor = find_eb_factor(5, Node.depth_found, Node.nodes_created)
     print 'Depth found:', Node.depth_found
     print 'Nodes created:', Node.nodes_created
     print 'Branching factor:', 5
-    print 'Effective branching factor:', eb_factor
+    print 'Effective branching factor:',
+    print Node.nodes_created ** (1.0 / Node.depth_found)
     print
     if solution is None:
         print 'There was no solution found.'

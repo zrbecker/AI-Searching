@@ -2,7 +2,7 @@ from collections import deque
 from heapq import heappop, heappush
 
 
-__all__ = ['Agent', 'Node', 'Solution', 'find_eb_factor']
+__all__ = ['Agent', 'Node', 'Solution']
 
 
 class Agent(object):
@@ -133,43 +133,3 @@ class Solution:
         self.actions = actions
         self.cost = cost
 
-
-def find_eb_factor(bf, depth, nodes):
-    """
-    Calculates the effective branching factor of
-    a search.
-
-    Node - If effective branching factor is not between
-           1 and the branching factor then this will return
-           a value near 1 or the branching factor.
-    """
-    return eb_factor_helper(1, bf, depth, nodes)
-
-
-def eb_factor_helper(beg, end, d, n):
-    """
-    Does a binary search to estimate the solution to
-    the equation.
-    1 + x + x^2 + ... + x^d = n
-    Assumes the answer is between beg and end
-    """
-    if float(end - beg) / 2 < 0.01:
-        return float(beg + end) / 2
-    nodes = summation(0, d, float(beg + end) / 2)
-    if nodes > n:
-        return eb_factor_helper(beg, float(beg + end) / 2, d, n)
-    elif nodes < n:
-        return eb_factor_helper(float(beg + end) / 2, end, d, n)
-    else:
-        return float(beg + end) / 2
-
-
-def summation(i, n, b):
-    """
-    Evaluates the equation b^i + b^{i + 1} + ... + b^n
-    """
-    sum = 0
-    while i <= n:
-        sum += b ** i
-        i += 1
-    return sum
