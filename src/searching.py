@@ -6,85 +6,88 @@ __all__ = ['Agent', 'Node', 'Solution']
 
 
 class Agent(object):
-    def breadth_search(self, problem, graph=True):
-        closed = set()
+    def breadth_search(self):
+        closed = {}
         fringe = deque()
-        fringe.append(Node(None, None, problem.init_state, 0))
+        fringe.append(Node(None, None, self.problem.init_state, 0))
         while fringe:
             node = fringe.popleft()
-            if problem.isgoal(node.state):
+            if self.problem.isgoal(node.state):
                 return node.solution()
-            if graph:
-                if node.state in closed:
-                    continue
+            if self.graph:
+                if node.state not in closed:
+                    closed[node.state] = node.cost
                 else:
-                    closed.add(node.state)
-            for (action, state) in problem.successors(node.state):
-                step_cost = problem.stepcost(node.state, action, state)
+                    continue
+            for (action, state) in self.problem.successors(node.state):
+                step_cost = self.problem.stepcost(node.state, action, state)
                 fringe.append(Node(node, action, state, step_cost))
 
-    def depth_search(self, problem, max_depth=None, graph=True):
-        closed = set()
+    def depth_search(self, max_depth=None):
+        closed = {}
         fringe = deque()
-        fringe.append(Node(None, None, problem.init_state, 0))
+        fringe.append(Node(None, None, self.problem.init_state, 0))
         while fringe:
             node = fringe.pop()
-            if problem.isgoal(node.state):
+            if self.problem.isgoal(node.state):
                 return node.solution()
-            if graph:
-                if node.state in closed:
-                    continue
+            if self.graph:
+                if node.state not in closed or node.cost < closed[node.state]:
+                    closed[node.state] = node.cost
                 else:
-                    closed.add(node.state)
+                    continue
             if max_depth is None or node.depth <= max_depth:
-                for (action, state) in problem.successors(node.state):
-                    step_cost = problem.stepcost(node.state, action, state)
-                    fringe.append( Node(node, action, state, step_cost) )
+                for (action, state) in self.problem.successors(node.state):
+                    step_cost = \
+                        self.problem.stepcost(node.state, action, state)
+                    fringe.append(Node(node, action, state, step_cost))
 
-    def iterative_search(self, problem, graph=True):
+    def iterative_search(self):
         n = 0
         while 1:
-            solution = self.depth_search(problem, n, graph)
+            solution = self.depth_search(n)
             if solution is None:
                 n += 1
             else:
                 return solution
 
-    def greedy_search(self, problem, graph=True):
-        closed = set()
+    def greedy_search(self):
+        closed = {}
         fringe = []
-        root = Node(None, None, problem.init_state, 0)
+        root = Node(None, None, self.problem.init_state, 0)
         heappush(fringe, (self.greedy_eval(root), root))
         while fringe:
             value, node = heappop(fringe)
-            if problem.isgoal(node.state):
+            if self.problem.isgoal(node.state):
                 return node.solution()
-            if graph:
-                if node.state in closed:
-                    continue
-                else:
-                    closed.add(node.state)
-                for (action, state) in problem.successors(node.state):
-                    step_cost = problem.stepcost(node.state, action, state)
-                    newNode = Node(node, action, state, step_cost)
-                    heappush(fringe, (self.greedy_eval(newNode), newNode))
-
-    def astar_search(self, problem, graph=True):
-        closed = {}
-        fringe = []
-        root = Node(None, None, problem.init_state, 0)
-        heappush(fringe, (self.astar_eval(root), root))
-        while fringe:
-            value, node = heappop(fringe)
-            if problem.isgoal(node.state):
-                return node.solution()
-            if graph:
+            if self.graph:
                 if node.state not in closed or node.cost < closed[node.state]:
                     closed[node.state] = node.cost
                 else:
                     continue
-            for (action, state) in problem.successors(node.state):
-                step_cost = problem.stepcost(node.state, action, state)
+                for (action, state) in self.problem.successors(node.state):
+                    step_cost = \
+                        self.problem.stepcost(node.state, action, state)
+                    newNode = Node(node, action, state, step_cost)
+                    heappush(fringe, (self.greedy_eval(newNode), newNode))
+
+    def astar_search(self):
+        closed = {}
+        fringe = []
+        root = Node(None, None, self.problem.init_state, 0)
+        heappush(fringe, (self.astar_eval(root), root))
+        while fringe:
+            value, node = heappop(fringe)
+            if self.problem.isgoal(node.state):
+                return node.solution()
+            if self.graph:
+                if node.state not in closed or node.cost < closed[node.state]:
+                    closed[node.state] = node.cost
+                else:
+                    continue
+            for (action, state) in self.problem.successors(node.state):
+                step_cost = \
+                    self.problem.stepcost(node.state, action, state)
                 newNode = Node(node, action, state, step_cost)
                 heappush(fringe, (self.astar_eval(newNode), newNode))
 
@@ -94,10 +97,13 @@ class Agent(object):
     def astar_eval(self, node):
         return node.cost
 
+    def __init__(self, problem, graph=True):
+        self.problem = problem
+        self.graph = graph
 
-class Node:
+
+class Node(object):
     nodes_created = 0
-    depth_found = 0
 
     def __init__(self, parent, action, state, step_cost):
         Node.nodes_created += 1
@@ -118,23 +124,33 @@ class Node:
         of actions to execute the solution.
 
         """
-        Node.depth_found = self.depth
         current_node = self
         actions = []
         while current_node.action != None:
             actions.append(current_node.action)
             current_node = current_node.parent
         actions.reverse()
-        return Solution(current_node, actions, self.cost)
+        return Solution(current_node, actions, self.cost, self.depth)
 
 
-class Solution:
+class Solution(object):
     """
     Contains init_state, a list of actions, and a cost
     
     """
-    def __init__(self, init_state, actions, cost):
+    def __init__(self, init_state, actions, cost, depth):
         self.init_state = init_state
         self.actions = actions
         self.cost = cost
+        self.depth = depth
+
+    def __str__(self):
+        result = 'Depth found: ' + str(self.depth) + '\n'
+        result += 'Solution cost: ' + str(self.cost) + '\n\n'
+        if self.actions:
+            for action in self.actions:
+                result += action + ' '
+        else:
+            result += 'The task is already solved!'
+        return result
 

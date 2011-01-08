@@ -3,7 +3,6 @@
 import sys
 import getopt
 import random
-import random
 
 from searching import *
 
@@ -226,39 +225,31 @@ def handleargs():
 def main():
     (type, max, graph, width, height) = handleargs()
     problem = VacuumWorld(width, height)
-    agent = VacuumWorldAgent()
+    agent = VacuumWorldAgent(problem, graph)
     print 'Initial State:'
     print problem.init_state
     Node.nodes_created = 0
     if type == 'breadth':
         print 'Doing breadth first search'
-        solution = agent.breadth_search(problem, graph)
+        solution = agent.breadth_search()
     elif type == 'depth':
         print 'Doing depth first search'
-        solution = agent.depth_search(problem, max, graph)
+        solution = agent.depth_search(max)
     elif type == 'iter':
         print 'Doing iteretive search'
-        solution = agent.iterative_search(problem, graph)
+        solution = agent.iterative_search()
     elif type == 'greedy':
         print 'Doing greedy search'
-        solution = agent.greedy_search(problem, graph)
+        solution = agent.greedy_search()
     elif type == 'astar':
         print 'Doing A* search'
-        solution = agent.astar_search(problem, graph)
-    print 'Depth found:', Node.depth_found
+        solution = agent.astar_search()
+    print
     print 'Nodes created:', Node.nodes_created
     print 'Branching factor:', 5
     print 'Effective branching factor:',
-    print Node.nodes_created ** (1.0 / Node.depth_found)
-    print
-    if solution is None:
-        print 'There was no solution found.'
-    elif len(solution.actions) == 0:
-        print 'The task is already solved!'
-    else:
-        print 'Solution Cost:', solution.cost
-        for action in solution.actions:
-            print action,
+    print Node.nodes_created ** (1.0 / solution.depth)
+    print solution
 
 
 if __name__ == '__main__':
